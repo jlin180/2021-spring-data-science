@@ -15,31 +15,77 @@ For this section of the exercise we will be using the `bigquery-public-data.aust
 
 5. Write a query that tells us how many rows are in the table. 
 	```
-	[YOUR QUERY HERE]
+	SELECT
+  	COUNT(*)
+	FROM
+ 	`bigquery-public-data.austin_311.311_service_requests`;
 	```
 
 7. Write a query that tells us how many _distinct_ values there are in the complaint_description column.
 	``` 
-	[YOUR QUERY HERE]
+	SELECT
+  	COUNT(DISTINCT complaint_description)
+	FROM
+	`bigquery-public-data.austin_311.311_service_requests`;
 	```
   
 8. Write a query that counts how many times each owning_department appears in the table and orders them from highest to lowest. 
 	``` 
-	[YOUR QUERY HERE]
+	SELECT
+ 	owning_department,
+  	COUNT(owning_department) AS count_owning_department
+	FROM
+  	`bigquery-public-data.austin_311.311_service_requests`
+	GROUP BY
+  	owning_department
+	ORDER BY
+  	count_owning_department DESC;
 	```
 
 9. Write a query that lists the top 5 complaint_description that appear most and the amount of times they appear in this table. (hint... limit)
 	```
-	[YOUR QUERY HERE]
+	SELECT
+	  complaint_description,
+	  COUNT(complaint_description) AS count_complaint_description
+	FROM
+	  `bigquery-public-data.austin_311.311_service_requests`
+	GROUP BY
+	  complaint_description
+	ORDER BY
+	  count_complaint_description DESC
+	LIMIT
+	  5;
 	  ```
 10. Write a query that lists and counts all the complaint_description, just for the where the owning_department is 'Animal Services Office'.
 	```
-	[YOUR QUERY HERE]
+	SELECT
+	  complaint_description,
+	  COUNT(complaint_description) AS count_complaint_description
+	FROM
+	  `bigquery-public-data.austin_311.311_service_requests`
+	WHERE
+	  owning_department = 'Animal Services Office'
+	GROUP BY
+	  complaint_description;
 	```
 
 11. Write a query to check if there are any duplicate values in the unique_key column (hint.. There are two was to do this, one is to use a temporary table for the groupby, then filter for values that have more than one count, or, using just one table but including the  `having` function). 
 	```
-	[YOUR QUERY HERE]
+	WITH
+	  UNIQUE_TABLE AS(
+	  SELECT
+	    unique_key,
+	    COUNT(unique_key) AS count_unique_key
+	  FROM
+	    `bigquery-public-data.austin_311.311_service_requests`
+	  GROUP BY
+	    unique_key )
+	SELECT
+	  *
+	FROM
+	  UNIQUE_TABLE
+	WHERE
+	  count_unique_key > 1;
 	```
 
 
@@ -47,58 +93,199 @@ For this section of the exercise we will be using the `bigquery-public-data.aust
 
 1. Write a query that returns each zipcode and their population for 2000 and 2010. 
 	```
-	[YOUR QUERY HERE]
+	WITH
+	  TABLE_2000 AS(
+	  SELECT
+	    zipcode,
+	    population AS population_2000
+	  FROM
+	    `bigquery-public-data.census_bureau_usa.population_by_zip_2000` ),
+	  TABLE_2010 AS (
+	  SELECT
+	    zipcode,
+	    population AS population_2010
+	  FROM
+	    `bigquery-public-data.census_bureau_usa.population_by_zip_2010` )
+	SELECT * FROM TABLE_2010 JOIN TABLE_2000 ON TABLE_2000.zipcode = TABLE_2010.zipcode
 	```
 
 ### For the next section, use the  `bigquery-public-data.google_political_ads.advertiser_weekly_spend` table.
 1. Using the `advertiser_weekly_spend` table, write a query that finds the advertiser_name that spent the most in usd. 
 	```
-	[YOUR QUERY HERE]
+	SELECT 
+	    advertiser_name,
+	    SUM(spend_usd) AS advertiser_total_spending_USD
+	FROM 
+	    `bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	GROUP BY 
+	    advertiser_name
+	ORDER BY 
+	    advertiser_total_spending_USD DESC;
 	```
 2. Who was the 6th highest spender? (No need to insert query here, just type in the answer.)
 	```
-	[YOUR ANSWER HERE]
+	SENATE LEADERSHIP FUND
 	```
 
 3. What week_start_date had the highest spend? (No need to insert query here, just type in the answer.)
 	```
-	[YOUR ANSWER HERE]
+	SELECT 
+	    week_start_date,
+	    SUM(spend_usd) AS advertiser_total_spending_USD
+	FROM 
+	    `bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	GROUP BY 
+	    week_start_date
+	ORDER BY 
+	    advertiser_total_spending_USD DESC
+	LIMIT 1;
+
+	#2020-10-25
 	```
 
 4. Using the `advertiser_weekly_spend` table, write a query that returns the sum of spend by week (using week_start_date) in usd for the month of August only. 
 	```
-	[YOUR QUERY HERE]
+	WITH WEEK_START_TABLE AS(SELECT 
+	    CAST(week_start_date AS STRING) AS WEEK_START_DATE_STRING,
+	    SUM(spend_usd) AS advertiser_total_spending_USD
+	FROM 
+	    `bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	GROUP BY 
+	    week_start_date
+	)
+	SELECT 
+	    *
+	FROM 
+	    WEEK_START_TABLE 
+	WHERE
+	    WEEK_START_DATE_STRING LIKE '%_-08-_%';
 	```
 6.  How many ads did the 'TOM STEYER 2020' campaign run? (No need to insert query here, just type in the answer.)
 	```
-	[YOUR ANSWER HERE]
+	SELECT 
+	 advertiser_name,
+	 COUNT(advertiser_name) AS count_advertiser_name
+	FROM 
+	`bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	WHERE 
+	    advertiser_name = 'TOM STEYER 2020'
+	GROUP BY 
+	    advertiser_name;
 	```
 7. Write a query that has, in the US region only, the total spend in usd for each advertiser_name and how many ads they ran. (Hint, you're going to have to join tables for this one). 
 	```
-		[YOUR QUERY HERE]
+	SELECT 
+		geo_spend.advertiser_name, 
+		SUM(weekly_spend.spend_usd) AS total_spent, 
+		COUNT(geo_spend.advertiser_name) AS total_count
+	FROM 
+		`bigquery-public-data.google_political_ads.advertiser_geo_spend` AS geo_spend
+	FULL JOIN 
+		`bigquery-public-data.google_political_ads.advertiser_weekly_spend` AS weekly_spend
+	ON 
+		geo_spend.advertiser_id = weekly_spend.advertiser_id
+	WHERE 
+		geo_spend.country = "US"
+	GROUP BY 
+		geo_spend.advertiser_name
+	;
 	```
 8. For each advertiser_name, find the average spend per ad. 
 	```
-	[YOUR QUERY HERE]
+	SELECT 
+	    advertiser_name,
+	    AVG(spend_usd) AS average_spent_usd
+	FROM 
+	    `bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	GROUP BY 
+	    advertiser_name;
+
 	```
 10. Which advertiser_name had the lowest average spend per ad that was at least above 0. 
 	``` 
-	[YOUR QUERY HERE]
+	WITH AVG_SPENT AS (
+	SELECT 
+	    advertiser_name,
+	    AVG(spend_usd) AS average_spent_usd
+	FROM 
+	    `bigquery-public-data.google_political_ads.advertiser_weekly_spend`
+	GROUP BY 
+	    advertiser_name
+	ORDER BY 
+	    average_spent_usd ASC
+	)
+	SELECT 
+	    * 
+	FROM 
+	    AVG_SPENT 
+	WHERE 
+	    average_spent_usd > 0
+	LIMIT 1;
+
 	```
 ## For this next section, use the `new_york_citibike` datasets.
 
 1. Who went on more bike trips, Males or Females?
 	```
-	[YOUR QUERY HERE]
+	SELECT 
+	gender,
+	COUNT(gender) as gender_total
+	FROM 
+	`bigquery-public-data.new_york_citibike.citibike_trips`
+	GROUP BY 
+	gender
+	ORDER BY 
+	gender_total DESC 
+	LIMIT 1;
 	```
 2. What was the average, shortest, and longest bike trip taken in minutes?
 	```
-	[YOUR QUERY HERE]
+	WITH NO_NULL_DURATION AS(
+	    SELECT * 
+	    FROM `bigquery-public-data.new_york_citibike.citibike_trips`
+	    WHERE 
+	    tripduration IS NOT NULL
+	)
+	SELECT 
+	(AVG(tripduration)/60) AS average_tripduration_minutes,
+	(MIN(tripduration)/60) AS shortest_tripduration_minutes,
+	(MAX(tripduration)/60) AS longest_tripduration_minutes,
+	FROM 
+	NO_NULL_DURATION ;
+
 	```
 
 3. Write a query that, for every station_name, has the amount of trips that started there and the amount of trips that ended there. (Hint, use two temporary tables, one that counts the amount of starts, the other that counts the number of ends, and then join the two.) 
 	```
-	[YOUR QUERY HERE]
+	WITH
+	 STARTED_STATIONS AS(
+	    SELECT 
+	    start_station_name,
+	    COUNT(start_station_name) as total_start_stations
+	    FROM
+	    `bigquery-public-data.new_york_citibike.citibike_trips`
+	    GROUP BY 
+	    start_station_name
+	),
+	 ENDED_STATIONS AS(
+	    SELECT 
+	    end_station_name,
+	    COUNT(end_station_name) as total_end_stations
+	    FROM
+	    `bigquery-public-data.new_york_citibike.citibike_trips`
+	    GROUP BY 
+	    end_station_name
+	)
+	SELECT 
+	start_station_name AS station_name,
+	total_start_stations,
+	total_end_stations,
+	FROM
+	STARTED_STATIONS 
+	INNER JOIN 
+	ENDED_STATIONS
+	ON STARTED_STATIONS.start_station_name = ENDED_STATIONS.end_station_name;
+
 	```
 # The next section is the Google Colab section.  
 1. Open up this [this Colab notebook](https://colab.research.google.com/drive/1kHdTtuHTPEaMH32GotVum41YVdeyzQ74?usp=sharing).
